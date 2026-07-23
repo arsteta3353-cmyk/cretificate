@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프드프 수료증 생성기</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#E9E7E1; --panel:#FBFAF7; --ink:#1A1C24; --sub:#71747E;
+    --line:#E2DFD8; --ui:#2F6BE0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);word-break:keep-all;
+    -webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+  }
+  .app{display:grid;grid-template-columns:392px 1fr;min-height:100vh}
+
+  /* ---------- panel ---------- */
+  .panel{background:var(--panel);border-right:1px solid var(--line);padding:26px 24px 48px;overflow-y:auto;max-height:100vh}
+  .brand{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+  .brand svg{height:19px;width:auto;color:var(--ink)}
+  .brand span{font-size:12px;font-weight:600;letter-spacing:.16em;color:var(--sub)}
+  .lede{font-size:12.5px;color:var(--sub);line-height:1.65;margin-bottom:20px}
+
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#F0EEE9;padding:4px;border-radius:10px;margin-bottom:22px}
+  .tab{padding:9px;border:none;background:transparent;border-radius:7px;font-family:inherit;
+    font-size:13.5px;font-weight:700;color:var(--sub);cursor:pointer;letter-spacing:-.02em}
+  .tab.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+
+  .grp{margin-bottom:22px}
+  .grp h3{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--sub);
+    margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .grp h3::after{content:"";flex:1;height:1px;background:var(--line)}
+  label.f{display:block;margin-bottom:12px}
+  label.f>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:#3a3d47}
+  label.f>span em{font-style:normal;font-weight:400;color:var(--sub)}
+  input[type=text],input[type=number],input[type=date],textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    font-size:13.5px;font-family:inherit;color:var(--ink);background:#fff;
+    letter-spacing:-.02em;transition:border-color .14s,box-shadow .14s;
+  }
+  textarea{resize:vertical;min-height:140px;line-height:1.7}
+  input:focus,textarea:focus{outline:none;border-color:var(--ui);box-shadow:0 0 0 3px rgba(47,107,224,.14)}
+  .r2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+  .presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .pbtn{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:9px 8px;
+    cursor:pointer;font-family:inherit;text-align:left;transition:border-color .14s,background .14s}
+  .pbtn:hover{border-color:#C9C4B9}
+  .pbtn.on{border-color:var(--ui);background:rgba(47,107,224,.06)}
+  .pbtn b{display:block;font-size:12.5px;font-weight:700;letter-spacing:-.02em}
+  .pbtn small{font-size:10.5px;color:var(--sub)}
+
+  .segs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+  .seg{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:9px;
+    cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:#3a3d47;letter-spacing:-.02em}
+  .seg.on{border-color:var(--ui);background:rgba(47,107,224,.06);color:var(--ink)}
+
+  .colors{display:flex;align-items:center;gap:10px;margin-top:4px}
+  .colors input[type=color]{width:42px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;padding:3px}
+  .sw{display:flex;gap:6px}
+  .sw button{width:23px;height:23px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+    padding:12px;border-radius:10px;font-size:13.5px;font-weight:700;font-family:inherit;
+    cursor:pointer;border:none;letter-spacing:-.02em;transition:filter .14s}
+  .btn+.btn{margin-top:8px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .b1{background:var(--ui);color:#fff}
+  .b1:hover:not(:disabled){filter:brightness(1.07)}
+  .b2{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .b2:hover:not(:disabled){border-color:#C9C4B9}
+  .hint{font-size:11.5px;color:var(--sub);line-height:1.6;margin-top:9px}
+  .warn{font-size:12px;color:#B3261E;background:#FDEDEC;border:1px solid #F5C9C5;
+    padding:9px 11px;border-radius:9px;margin-top:10px;line-height:1.6;display:none}
+  .prog{font-size:12.5px;color:var(--sub);margin-top:10px;display:none}
+  .prog .bar{height:5px;background:#E5E2DB;border-radius:3px;margin-top:6px;overflow:hidden}
+  .prog .bar i{display:block;height:100%;width:0;background:var(--ui);border-radius:3px;transition:width .2s}
+  .count{font-size:11.5px;color:var(--sub);margin-top:6px}
+
+  /* ---------- stage ---------- */
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:15px}
+  .snote{font-size:12px;color:var(--sub)}
+
+  /* ============ CERTIFICATE ============ */
+  #cert{
+    --accent:#1F7A4D; --paper:#FCFBF9; --cink:#1A1C24; --csub:#9497A1;
+    width:452px;height:639px;background:var(--paper);position:relative;padding:0 46px;
+    display:flex;flex-direction:column;align-items:center;
+    box-shadow:0 22px 55px -24px rgba(20,22,35,.42),0 2px 10px -4px rgba(20,22,35,.12);
+    color:var(--cink);font-feature-settings:"tnum";
+  }
+  .fr1{position:absolute;inset:16px;border:1px solid #E6E2D8;pointer-events:none}
+  .fr2{position:absolute;inset:21px;border:1px solid var(--accent);opacity:.26;pointer-events:none}
+
+  .medal{margin-top:30px;width:98px;height:131px;position:relative;z-index:3}
+  .medal svg{width:100%;height:100%;display:block}
+  .medal .num{position:absolute;top:45.8px;left:0;width:98px;text-align:center;
+    transform:translateY(-50%);font-size:21px;font-weight:700;color:#EBCE7C;letter-spacing:-.02em}
+
+  /* 자간 완화 : 제목 -.02 / 본문 0 / 정보 0 */
+  #cTitle{font-weight:800;font-size:24.5px;line-height:1.46;text-align:center;
+    margin-top:16px;letter-spacing:-.02em;text-wrap:balance}
+  #cSub{font-family:"Cormorant Garamond";font-size:13.5px;font-weight:500;
+    letter-spacing:.15em;color:var(--csub);margin-top:11px}
+  .div{width:34px;height:2px;background:var(--accent);margin-top:19px;opacity:.85}
+
+  .info{margin-top:26px;width:100%;max-width:330px;display:flex;flex-direction:column;gap:14px}
+  .info .row{display:flex;align-items:baseline;font-size:13.5px;line-height:1.62}
+  .info .k{width:52px;flex:none;color:var(--csub);font-weight:600;font-size:12.5px;
+    text-align:justify;text-align-last:justify;position:relative;padding-left:13px}
+  .info .k::before{content:"";position:absolute;left:0;top:.52em;width:4.5px;height:4.5px;
+    border-radius:50%;background:var(--accent)}
+  .info .sep{margin:0 11px 0 9px;color:#D8D4CA}
+  .info .v{color:#33353F;font-weight:500;letter-spacing:0}
+  .info .v b{font-weight:700;color:var(--cink)}
+
+  #cBody{margin-top:30px;text-align:center;font-size:13.5px;line-height:2.1;
+    color:#3D3F48;font-weight:400;max-width:312px;letter-spacing:0;text-wrap:balance}
+  #cBody b{color:var(--cink);font-weight:700}
+
+  .foot{margin-top:auto;padding-bottom:38px;display:flex;flex-direction:column;
+    align-items:center;gap:22px;width:100%}
+  #cDate{font-size:13.5px;font-weight:600;color:#33353F;letter-spacing:.01em}
+
+  /* 두 하단 형태 모두 동일한 가로 락업 구조 */
+  .lock{display:flex;align-items:center;justify-content:center;gap:13px}
+  .plogo{height:23px;width:auto;display:block;color:var(--cink)}
+  .lock .x{color:var(--accent);font-size:14px;font-weight:600;opacity:.9;margin-top:1px}
+  .lock .vbar{width:1px;height:15px;background:var(--accent);opacity:.45}
+  .lock .pt{font-weight:800;font-size:16.5px;letter-spacing:-.02em}
+
+  .sign{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+  .sign .signame{width:124px;height:auto;display:block}
+  .sign .sigmark{position:absolute;width:128px;height:auto;left:calc(50% + 4px);bottom:-11px;pointer-events:none}
+  .sign .sc{color:var(--accent);opacity:.55;font-family:"Cormorant Garamond";
+    font-style:italic;font-size:18px;letter-spacing:.02em}
+
+  @media (max-width:980px){
+    .app{grid-template-columns:1fr}
+    .panel{max-height:none;border-right:none;border-bottom:1px solid var(--line)}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= PANEL ================= -->
+  <aside class="panel">
+    <div class="brand">
+      <svg viewBox="0 0 130 80" fill="currentColor" aria-label="프드프">
+        <path d="M100.86,5.24H48v12h3.32V8.57h47.2v22.9h23.16v39.97H51.32v-8.68H48v12h77V29.11L100.86,5.24z M101.84,28.14V10.88l17.46,17.26H101.84z"/>
+        <polygon points="54.06,52.39 51.32,52.39 48,52.39 44.89,52.39 5,52.39 5,56.35 44.89,56.35 48,56.35 51.32,56.35 54.06,56.35 93.95,56.35 93.95,52.39"/>
+        <path d="M33.42,41.58h-3.36V29.75h3.36v-4.24H7.37v4.24h3.66v11.83H7.37v4.2h26.05V41.58z M24.96,41.58h-8.83V29.75h8.83V41.58z"/>
+        <path d="M91.58,41.58h-3.36V29.75h3.36v-4.24H65.53v4.24h3.66v11.83h-3.66v4.2h26.05V41.58z M83.12,41.58h-8.83V29.75h8.83V41.58z"/>
+        <polygon points="48,45.79 51.32,45.79 54.06,45.79 60.36,45.79 60.36,41.61 54.06,41.61 51.32,41.61 48,41.61 44.89,41.61 43.19,41.61 43.19,29.33 44.89,29.33 48,29.33 51.32,29.33 54.06,29.33 60.36,29.33 60.36,25.51 54.06,25.51 51.32,25.51 48,25.51 44.89,25.51 38.58,25.51 38.58,45.79 44.89,45.79"/>
+      </svg>
+      <span>CERTIFICATE</span>
+    </div>
+    <p class="lede">과정 정보를 한 번 설정하고, 기수마다 명단만 바꿔 발급하세요.</p>
+
+    <div class="tabs">
+      <button class="tab on" data-mode="one">개별 발급</button>
+      <button class="tab" data-mode="bulk">명단 일괄 발급</button>
+    </div>
+
+    <div class="grp">
+      <h3>강의 프리셋</h3>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="grp">
+      <h3>과정 정보</h3>
+      <label class="f"><span>제목 1행</span><input type="text" id="t1" value="네이버 홈판"></label>
+      <label class="f"><span>제목 2행</span><input type="text" id="t2" value="블로그 챌린지 수료증"></label>
+      <label class="f"><span>영문 제목 <em>· 기수 서수는 자동</em></span><input type="text" id="ten" value="Naver Blog Challenge"></label>
+      <label class="f"><span>과정명 <em>· 본문·정보란에 표기</em></span><input type="text" id="course" value="네이버 홈판 수익화 챌린지"></label>
+      <div class="r2">
+        <label class="f"><span>기수</span><input type="number" id="gi" min="1" value="1"></label>
+        <label class="f"><span>이름 라벨</span><input type="text" id="klabel" value="닉네임"></label>
+      </div>
+      <label class="f"><span>주제 <em>· 선택</em></span><input type="text" id="topic" placeholder="예) 긍정적인 마음"></label>
+    </div>
+
+    <div class="grp">
+      <h3>일정</h3>
+      <div class="r2">
+        <label class="f"><span>시작일</span><input type="date" id="d1"></label>
+        <label class="f"><span>종료일</span><input type="date" id="d2"></label>
+      </div>
+      <label class="f"><span>수료일</span><input type="date" id="d3"></label>
+    </div>
+
+    <div class="grp">
+      <h3>하단 표기</h3>
+      <div class="segs">
+        <button class="seg on" data-foot="partner">공동 브랜드</button>
+        <button class="seg" data-foot="ceo">대표 서명</button>
+      </div>
+      <label class="f" id="partnerWrap"><span>파트너명</span><input type="text" id="partner" value="이서이"></label>
+      <div class="colors">
+        <input type="color" id="accent" value="#1F7A4D">
+        <div class="sw" id="sw"></div>
+      </div>
+    </div>
+
+    <div class="grp" id="oneBox">
+      <h3>수료자</h3>
+      <label class="f"><span>닉네임</span><input type="text" id="nick" value="필요쌤"></label>
+      <button class="btn b1" id="bPng">PNG 저장</button>
+      <button class="btn b2" id="bPdf">PDF 저장</button>
+    </div>
+
+    <div class="grp" id="bulkBox" style="display:none">
+      <h3>명단</h3>
+      <label class="f"><span>닉네임 목록 <em>· 한 줄에 한 명</em></span>
+        <textarea id="list" placeholder="필요쌤&#10;소담이&#10;포도킹"></textarea></label>
+      <div class="count" id="cnt">0명</div>
+      <label class="f" style="margin-top:10px"><span>또는 CSV 업로드 <em>· 첫 번째 열을 닉네임으로 읽음</em></span>
+        <input type="file" id="csv" accept=".csv,.txt" style="font-size:12px"></label>
+      <button class="btn b1" id="bZip">전원 PNG 생성 → ZIP 다운로드</button>
+      <button class="btn b2" id="bPdfAll">전원 통합 PDF 다운로드</button>
+      <div class="prog" id="prog"><span id="progT"></span><div class="bar"><i id="progB"></i></div></div>
+      <p class="hint">명단 인원수만큼 순서대로 생성됩니다. 인원이 많으면 시간이 걸리니 창을 닫지 마세요.</p>
+    </div>
+
+    <div class="warn" id="warn"></div>
+  </aside>
+
+  <!-- ================= STAGE ================= -->
+  <main class="stage">
+    <div id="cert">
+      <div class="fr1"></div><div class="fr2"></div>
+
+      <div class="medal">
+        <svg viewBox="0 0 120 160" aria-hidden="true">
+          <defs>
+            <linearGradient id="gold" x1=".12" y1="0" x2=".88" y2="1">
+              <stop offset="0" stop-color="#FAEFB4"/><stop offset=".26" stop-color="#DFBB55"/>
+              <stop offset=".52" stop-color="#B8860B"/><stop offset=".76" stop-color="#E5C86E"/>
+              <stop offset="1" stop-color="#C9A03A"/>
+            </linearGradient>
+          </defs>
+          <path id="rb1" d="M44 60 L28 140 L38 132 L46 144 L60 64 Z" fill="#2E9160"/>
+          <path id="rb2" d="M76 60 L92 140 L82 132 L74 144 L60 64 Z" fill="#17603C"/>
+          <circle cx="60" cy="56" r="44" fill="url(#gold)"/>
+          <circle cx="60" cy="56" r="44" fill="none" stroke="#9C7A1E" stroke-width="1"/>
+          <circle id="mdisc" cx="60" cy="56" r="36" fill="#1B2A45"/>
+          <circle cx="60" cy="56" r="31.5" fill="none" stroke="#D9B65A" stroke-width=".9" opacity=".85"/>
+        </svg>
+        <div class="num" id="cNum">1기</div>
+      </div>
+
+      <div id="cTitle"></div>
+      <div id="cSub"></div>
+      <div class="div"></div>
+
+      <div class="info">
+        <div class="row"><span class="k" id="cK">닉네임</span><span class="sep">:</span><span class="v"><b id="cNick"></b></span></div>
+        <div class="row"><span class="k">과정</span><span class="sep">:</span><span class="v" id="cCourse"></span></div>
+        <div class="row"><span class="k">기간</span><span class="sep">:</span><span class="v" id="cPeriod"></span></div>
+      </div>
+
+      <div id="cBody"></div>
+
+      <div class="foot">
+        <div id="cDate"></div>
+
+        <!-- 공동 브랜드형 -->
+        <div class="lock" id="footPartner">
+          <svg class="plogo" viewBox="0 0 130 80" fill="currentColor" aria-label="프드프">
+            <path d="M100.86,5.24H48v12h3.32V8.57h47.2v22.9h23.16v39.97H51.32v-8.68H48v12h77V29.11L100.86,5.24z M101.84,28.14V10.88l17.46,17.26H101.84z"/>
+            <polygon points="54.06,52.39 51.32,52.39 48,52.39 44.89,52.39 5,52.39 5,56.35 44.89,56.35 48,56.35 51.32,56.35 54.06,56.35 93.95,56.35 93.95,52.39"/>
+            <path d="M33.42,41.58h-3.36V29.75h3.36v-4.24H7.37v4.24h3.66v11.83H7.37v4.2h26.05V41.58z M24.96,41.58h-8.83V29.75h8.83V41.58z"/>
+            <path d="M91.58,41.58h-3.36V29.75h3.36v-4.24H65.53v4.24h3.66v11.83h-3.66v4.2h26.05V41.58z M83.12,41.58h-8.83V29.75h8.83V41.58z"/>
+            <polygon points="48,45.79 51.32,45.79 54.06,45.79 60.36,45.79 60.36,41.61 54.06,41.61 51.32,41.61 48,41.61 44.89,41.61 43.19,41.61 43.19,29.33 44.89,29.33 48,29.33 51.32,29.33 54.06,29.33 60.36,29.33 60.36,25.51 54.06,25.51 51.32,25.51 48,25.51 44.89,25.51 38.58,25.51 38.58,45.79 44.89,45.79"/>
+          </svg>
+          <span class="x">×</span><span class="pt" id="cPartner">이서이</span>
+        </div>
+
+        <!-- 대표 서명형 : 로고와 대표이사를 같은 층위로 -->
+        <div class="sign" id="footCeo" style="display:none">
+          <img class="sigmark" alt="" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB2ZXJzaW9uPSIxLjEiCiAgIGlkPSJzdmcxIgogICB3aWR0aD0iMzcxIgogICBoZWlnaHQ9IjE0NCIKICAgdmlld0JveD0iMTc0IDQ0IDM3MSAxNDQiCiAgIHNvZGlwb2RpOmRvY25hbWU9ImV4dHJhY3RlZF9vcmlnaW5hbC5zdmciCiAgIGlua3NjYXBlOnZlcnNpb249IjEuNC40IChkY2FmM2U3LCAyMDI2LTA1LTA1KSIKICAgeG1sbnM6aW5rc2NhcGU9Imh0dHA6Ly93d3cuaW5rc2NhcGUub3JnL25hbWVzcGFjZXMvaW5rc2NhcGUiCiAgIHhtbG5zOnNvZGlwb2RpPSJodHRwOi8vc29kaXBvZGkuc291cmNlZm9yZ2UubmV0L0RURC9zb2RpcG9kaS0wLmR0ZCIKICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogICB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8c29kaXBvZGk6bmFtZWR2aWV3CiAgICAgaWQ9Im5hbWVkdmlldzEiCiAgICAgcGFnZWNvbG9yPSIjZmZmZmZmIgogICAgIGJvcmRlcmNvbG9yPSIjMDAwMDAwIgogICAgIGJvcmRlcm9wYWNpdHk9IjAuMjUiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBzaG93Z3JpZD0iZmFsc2UiCiAgICAgaW5rc2NhcGU6em9vbT0iMS40NDQ2NDYiCiAgICAgaW5rc2NhcGU6Y3g9IjI1OC41NDA4NSIKICAgICBpbmtzY2FwZTpjeT0iMjQ4Ljg0OTg5IgogICAgIGlua3NjYXBlOndpbmRvdy13aWR0aD0iMTkyMCIKICAgICBpbmtzY2FwZTp3aW5kb3ctaGVpZ2h0PSIxMDA5IgogICAgIGlua3NjYXBlOndpbmRvdy14PSItOCIKICAgICBpbmtzY2FwZTp3aW5kb3cteT0iLTgiCiAgICAgaW5rc2NhcGU6d2luZG93LW1heGltaXplZD0iMSIKICAgICBpbmtzY2FwZTpjdXJyZW50LWxheWVyPSJnMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaW5rc2NhcGU6bGFiZWw9IkltYWdlIgogICAgIGlkPSJnMSI+CiAgICA8cGF0aAogICAgICAgc3R5bGU9ImZpbGw6IzAwMDAwMCIKICAgICAgIGQ9Im0gMjQyLjY4ODUsMTc4LjU2ODc4IGMgLTEuNzc4NzcsLTIuODc4MTIgMi4wMzE1NSwtOC42NzQ3NSAxNi4yOTM3MywtMjQuNzg3NTMgNC4wNjIzLC00LjU4OTQgNy4yMDY4NCwtOC41MjM1MiA2Ljk4Nzg4LC04Ljc0MjQ5IC0xLjI4MTk4LC0xLjI4MTk3IC00OC4yNjg2MiwxNi40NTIyMiAtNzIuNzQ2NDgsMjcuNDU2NzQgLTE1LjgyNTMzLDcuMTE0NTkgLTE0LjUzMjM5LDUuNDQyODEgNS41LC03LjExMTYyIDE0LjQwMDU4LC05LjAyNDkzIDQ1LjgzODUxLC0yNS4zMTkyNiA2Ni4yNSwtMzQuMzM3NDggMTMuODIyNzcsLTYuMTA3MTkgMTQuODA0NjUsLTYuODEzNzcgMTAuODQ4NCwtNy44MDY3MyAtOC4wMjI2NSwtMi4wMTM1NSAtMzIuMzEzOTUsNS4wMTEyOCAtNjMuNTk4NCwxOC4zOTIxIC0xNS4yMDY0LDYuNTA0IC0yMiw4LjMyMzI1IC0yMiw1Ljg5MTMzIDAsLTUuOTU5NzcgNjEuODYxNTYsLTUxLjk5MDQyMSAxMDgsLTgwLjM2MTg2MSA1LjIyNSwtMy4yMTI5NiAxMy4wMzkxNiwtOC4wNDYyIDE3LjM2NDgsLTEwLjc0MDU1IDQuMzI1NjQsLTIuNjk0MzQgOC4xNTA2NCwtNC41ODg4NiA4LjUsLTQuMjEwMDMgMC4zNDkzNiwwLjM3ODgyIDAuMTAzNjgsMC44NzkzMyAtMC41NDU5NSwxLjExMjI1IC0xMi43Mzc1Niw0LjU2NjgxIC0xMDAuMjY5NTgsNjQuODkzMTAxIC0xMjEuNzQxNDQsODMuOTAzMTMxIC0xNC41OTQwMSwxMi45MjA3NSAtMTMuODY1NjksMTMuMDc0ODggMTEuNzY3OTksMi40OTAzOSAzOC4wMjQ1LC0xNS43MDA4MyA1OS4xMzU5NywtMjEuMTE1NCA2NS4xNTg1OCwtMTYuNzExNTYgMS42NjQ5MywxLjIxNzQzIDMuMTI0NjcsMC44NTg1OCAxMi40NDExMywtMy4wNTg0MiA2Ni4wMzc1MSwtMjcuNzY0NjYxIDE4MS4xMTE4MywtNTYuMzcxMjMxIDIzMi41NTQ4OSwtNTcuODExMzAxIGwgMTQsLTAuMzkxOTEgLTExLDAuODg3MTQgYyAtNTcuODAxMDYsNC42NjE2MyAtMTQ4LjMzNTM5LDI1LjU5MDEyIC0yMDkuMjA2NjEsNDguMzYxNTMxIC0yNS4xMDg4MSw5LjM5MyAtMzcuMjkzMzksMTQuODE3MDQgLTM3LjI5MzM5LDE2LjYwMTM3IDAsMC45MzU0MyAtMS43ODYsNC4yNTAzOCAtMy45Njg4OSw3LjM2NjU2IC0yLjE4MjksMy4xMTYxOCAtMy42MTczMSw1LjY2NTc4IC0zLjE4NzU5LDUuNjY1NzggMC40Mjk3MiwwIDQuODAzMjIsLTEuMzU5NTYgOS43MTg4OSwtMy4wMjEyNCA0OS4yMzEwMSwtMTYuNjQxOTUgMTM3Ljc1ODIxLC0zMy45NzI1MSAxNzMuNTYyNTksLTMzLjk3NzU1IDE2LjEwNTQ2LC0wLjAwMiAxOS4yMjExMywyLjE2MDk1IDguNjI1LDUuOTg4MzYgLTMuNDM3NSwxLjI0MTY1IC0yNi4wNSwxMC4wMTcyNiAtNTAuMjUsMTkuNTAxMzUgLTcwLjAxOTYyLDI3LjQ0MSAtNzEuNDQwMjMsMjcuODcxNDcgLTY3LjQ2NDgyLDIwLjQ0MzM0IDEuMzY1MDgsLTIuNTUwNjcgMC42NDQwMywtMi41MTEwMSAtMTEuMDM1MTgsMC42MDcwNCAtMTMuMjg2MTEsMy41NDcwNCAtMzUuNDA1MTcsMTEuMDM4NSAtNTYsMTguOTY2NTEgLTI1LjYxMjcyLDkuODU5NjYgLTM1LjcwNDk4LDEyLjM5NjU5IC0zNy41MzUxMyw5LjQzNTM1IHogbSAxMC42MTUxLC0xLjM3NTc3IGMgMy4wMjUwOSwtMC43ODc5NCAxNi4yODIxMywtNS40NjI5MyAyOS40NjAxLC0xMC4zODg4OCA0OS4yNjcsLTE4LjQxNjEgNzMuMTExNTIsLTI0Ljc1ODggNjYuNDU5OTMsLTE3LjY3ODUxIC01LjQ1MTU4LDUuODAyOTQgMy42NzE3NCwyLjk1NDA0IDUzLC0xNi41NTAxIDE4LjQyNSwtNy4yODUxNSA0MC44NjAzOSwtMTYuMDc3MDUgNDkuODU2NDIsLTE5LjUzNzU2IDguOTk2MDMsLTMuNDYwNTIgMTYuNTY4OTIsLTYuNTA0MzUgMTYuODI4NjUsLTYuNzY0MDcgMS4yNzQ3OCwtMS4yNzQ3OCAtMTMuNjQ1MDEsLTEuNjcwODggLTI1LjE4NTA3LC0wLjY2ODYzIC00OS42MDczNyw0LjMwODM4IC0xMDcuMjQ1ODksMTYuMjE4NiAtMTYwLjgyMTU4LDMzLjIzMTU4IGwgLTEyLjgyMTU4LDQuMDcxNSAtMTAuNTQ0MzMsMTIuMTA4NjQgYyAtMTkuNjgyMjIsMjIuNjAyMTkgLTIwLjYxNTMyLDI1LjkyMjI3IC02LjIzMjU0LDIyLjE3NjAzIHogbSAtNDAuNTc5OTcsLTE0LjMzODU1IGMgMTcuMTAzOSwtNy4wMjgxNSA0MC4yOTI0MywtMTUuNjU3NDkgNTAuNSwtMTguNzkyOTcgMy40OTA0MiwtMS4wNzIxNyA2LjUxNDIsLTIuODMwNjEgOC4yNzU3NiwtNC44MTI2NiAzLjQ4MzY0LC0zLjkxOTcxIDguMTM1MjksLTExLjU0NTUgNy40NTY2LC0xMi4yMjQxOCAtMS45NzE4NiwtMS45NzE4NiAtNzIuOTIwMDYsMzMuNzQ2NTkgLTg0LjczMjM2LDQyLjY1ODAxIC0yLjE0Mzc1LDEuNjE3MjkgLTEuMjUzNywxLjI4ODc3IDE4LjUsLTYuODI4MiB6IgogICAgICAgaWQ9InBhdGgxIiAvPgogIDwvZz4KPC9zdmc+Cg==">
+          <img class="signame" alt="프드프 CEO 송명진" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzU2IiBoZWlnaHQ9IjQzIiB2aWV3Qm94PSIwIDAgMzU2IDQzIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMzkuMDQ4MyAzMi43MTg4VjM3LjY4NzVIMC4wMDE0MDM4MVYzMi43MTg4SDM5LjA0ODNaTTM1Ljc2NyAzLjc1VjguNTMxMjVIMjkuNzY3VjIxLjQ2ODhIMzUuNTc5NVYyNi4xNTYySDMuMjM1NzhWMjEuNDY4OEg4Ljk1NDUzVjguNTMxMjVIMy4wNDgyOFYzLjc1SDM1Ljc2N1pNMTQuOTU0NSAyMS40Njg4SDIzLjg2MDhWOC41MzEyNUgxNC45NTQ1VjIxLjQ2ODhaTTc0LjM0NyAxOS43MzQ0VjI0LjUxNTZINDQuMTU5NVYzLjU2MjVINzQuMDE4OVY4LjM5MDYySDUwLjA2NThWMTkuNzM0NEg3NC4zNDdaTTc4LjYxMjcgMzIuNTMxMlYzNy40NTMxSDM5LjU2NThWMzIuNTMxMkg3OC42MTI3Wk0xMTguMTc3IDMyLjcxODhWMzcuNjg3NUg3OS4xMzAyVjMyLjcxODhIMTE4LjE3N1pNMTE0Ljg5NiAzLjc1VjguNTMxMjVIMTA4Ljg5NlYyMS40Njg4SDExNC43MDhWMjYuMTU2Mkg4Mi4zNjQ1VjIxLjQ2ODhIODguMDgzM1Y4LjUzMTI1SDgyLjE3N1YzLjc1SDExNC44OTZaTTk0LjA4MzMgMjEuNDY4OEgxMDIuOTlWOC41MzEyNUg5NC4wODMzVjIxLjQ2ODhaTTE1Mi4xMTggMTYuMjE4OEMxNTEuNTU2IDEyLjQ2ODggMTQ4LjY1IDEwLjE3MTkgMTQ0LjcxMiAxMC4xNzE5QzEzOS40MTUgMTAuMTcxOSAxMzUuOTQ2IDE0LjI1IDEzNS45NDYgMjEuMzc1QzEzNS45NDYgMjguNjg3NSAxMzkuNDYyIDMyLjU3ODEgMTQ0LjY2NSAzMi41NzgxQzE0OC41NTYgMzIuNTc4MSAxNTEuNDE1IDMwLjQyMTkgMTUyLjExOCAyNi43NjU2TDE1OS4yNDMgMjYuODEyNUMxNTguNDQ2IDMzLjA5MzggMTUzLjE5NiAzOC44MTI1IDE0NC41NzEgMzguODEyNUMxMzUuNDc4IDM4LjgxMjUgMTI4Ljc3NSAzMi40Mzc1IDEyOC43NzUgMjEuMzc1QzEyOC43NzUgMTAuMzEyNSAxMzUuNjE4IDMuOTM3NSAxNDQuNTcxIDMuOTM3NUMxNTIuNCAzLjkzNzUgMTU4LjMwNiA4LjQzNzUgMTU5LjI0MyAxNi4yMTg4SDE1Mi4xMThaTTE2Mi4yNDUgMzguMzQzOFY0LjQwNjI1SDE4NS4wMjZWMTAuMjE4OEgxNjkuMjc2VjE4LjQ2ODhIMTgzLjg1NVYyNC4yODEySDE2OS4yNzZWMzIuNTMxMkgxODUuMDczVjM4LjM0MzhIMTYyLjI0NVpNMjE5LjY2OSAyMS4zNzVDMjE5LjY2OSAzMi40Mzc1IDIxMi43NzggMzguODEyNSAyMDMuODI1IDM4LjgxMjVDMTk0Ljc3OCAzOC44MTI1IDE4Ny45MzUgMzIuMzkwNiAxODcuOTM1IDIxLjM3NUMxODcuOTM1IDEwLjMxMjUgMTk0Ljc3OCAzLjkzNzUgMjAzLjgyNSAzLjkzNzVDMjEyLjc3OCAzLjkzNzUgMjE5LjY2OSAxMC4zMTI1IDIxOS42NjkgMjEuMzc1Wk0yMTIuNDk3IDIxLjM3NUMyMTIuNDk3IDE0LjEwOTQgMjA5LjA3NSAxMC4xNzE5IDIwMy44MjUgMTAuMTcxOUMxOTguNTc1IDEwLjE3MTkgMTk1LjEwNiAxNC4xMDk0IDE5NS4xMDYgMjEuMzc1QzE5NS4xMDYgMjguNjQwNiAxOTguNTc1IDMyLjU3ODEgMjAzLjgyNSAzMi41NzgxQzIwOS4wNzUgMzIuNTc4MSAyMTIuNDk3IDI4LjY0MDYgMjEyLjQ5NyAyMS4zNzVaTTI1Mi43MiAxNS4wOTM4VjIwLjM0MzhIMjY5LjI2NlYyNS4xMjVIMjMwLjM2VjIwLjM0MzhIMjQ2LjgxM1YxNS4wOTM4SDI1Mi43MlpNMjUyLjgxMyAyLjEwOTM4QzI1Mi44MTMgNy4wNzgxMiAyNTcuNTk1IDExLjgxMjUgMjY3LjIwNCAxMi45ODQ0TDI2NC45MDcgMTcuNjI1QzI1Ny43MTIgMTYuNTQ2OSAyNTIuNDE1IDEzLjUyMzQgMjQ5LjcyIDkuMjM0MzhDMjQ2Ljk3NyAxMy41MjM0IDI0MS42OCAxNi41NzAzIDIzNC40ODUgMTcuNjI1TDIzMi4zNzYgMTIuOTg0NEMyNDEuNzk4IDExLjgxMjUgMjQ2LjcyIDYuOTM3NSAyNDYuNzIgMi4xMDkzOFYwLjcwMzEyNUgyNTIuODEzVjIuMTA5MzhaTTI0OS43NjYgMjcuNDY4OEMyNTkuMDQ4IDI3LjQ2ODggMjY0LjU3OSAzMC4yMzQ0IDI2NC42MjYgMzUuMTA5NEMyNjQuNTc5IDM5Ljk4NDQgMjU5LjA0OCA0Mi42NTYyIDI0OS43NjYgNDIuNjU2MkMyNDAuMzkxIDQyLjY1NjIgMjM0LjgxMyAzOS45ODQ0IDIzNC44MTMgMzUuMTA5NEMyMzQuODEzIDMwLjIzNDQgMjQwLjM5MSAyNy40Njg4IDI0OS43NjYgMjcuNDY4OFpNMjQ5Ljc2NiAzMi4wMTU2QzI0My44MTMgMzIuMDE1NiAyNDAuODYgMzMgMjQwLjkwNyAzNS4xMDk0QzI0MC44NiAzNy4yMTg4IDI0My44MTMgMzguMjAzMSAyNDkuNzY2IDM4LjIwMzFDMjU1LjU3OSAzOC4yMDMxIDI1OC41NzkgMzcuMjE4OCAyNTguNjI2IDM1LjEwOTRDMjU4LjU3OSAzMyAyNTUuNTc5IDMyLjAxNTYgMjQ5Ljc2NiAzMi4wMTU2Wk0zMTUuMDIgMFYyNC45ODQ0SDMwOS4wNjdWMTkuNTQ2OUgzMDEuMDk4VjIyLjY0MDZIMjgwLjg0OFYzLjE0MDYySDMwMS4wOThWNi4yMzQzOEgzMDkuMDY3VjBIMzE1LjAyWk0yODYuODAxIDcuODc1VjE3LjkwNjJIMjk1LjIzOVY3Ljg3NUgyODYuODAxWk0zMDAuNDQyIDI2LjEwOTRDMzA5LjUzNiAyNi4xMDk0IDMxNS4xMTQgMjkuMTU2MiAzMTUuMTYxIDM0LjQwNjJDMzE1LjExNCAzOS42NTYyIDMwOS41MzYgNDIuNjU2MiAzMDAuNDQyIDQyLjY1NjJDMjkxLjM0OCA0Mi42NTYyIDI4NS43NyAzOS42NTYyIDI4NS43NyAzNC40MDYyQzI4NS43NyAyOS4xNTYyIDI5MS4zNDggMjYuMTA5NCAzMDAuNDQyIDI2LjEwOTRaTTMwMC40NDIgMzAuNjU2MkMyOTQuNzcgMzAuNjU2MiAyOTEuNzIzIDMxLjg3NSAyOTEuNzIzIDM0LjQwNjJDMjkxLjcyMyAzNi44NDM4IDI5NC43NyAzOC4xMDk0IDMwMC40NDIgMzguMTA5NEMzMDYuMTE0IDM4LjEwOTQgMzA5LjIwOCAzNi44NDM4IDMwOS4yMDggMzQuNDA2MkMzMDkuMjA4IDMxLjg3NSAzMDYuMTE0IDMwLjY1NjIgMzAwLjQ0MiAzMC42NTYyWk0zMDEuMDk4IDE0LjcxODhIMzA5LjA2N1YxMC45Njg4SDMwMS4wOThWMTQuNzE4OFpNMzM1LjI3MiA4LjQzNzVDMzM1LjI3MiAxMy41NDY5IDMzOC40MTMgMTguNzUgMzQ1LjQ0NCAyMC44NTk0TDM0Mi4zOTcgMjUuNTQ2OUMzMzcuNjE2IDI0LjA0NjkgMzM0LjI0MSAyMC45NzY2IDMzMi4zMTkgMTcuMTA5NEMzMzAuMzc0IDIxLjMwNDcgMzI2LjkwNSAyNC42Nzk3IDMyMS45MTMgMjYuMzQzOEwzMTguODE5IDIxLjY1NjJDMzI1Ljg5NyAxOS4zNTk0IDMyOS4xNzggMTMuODI4MSAzMjkuMTc4IDguNDM3NVY3LjgyODEySDMyMC40MTNWMy4wNDY4OEgzNDMuODVWNy44MjgxMkgzMzUuMjcyVjguNDM3NVpNMzU0LjM1IDAuMDQ2ODc1VjMwLjg5MDZIMzQ4LjM1VjAuMDQ2ODc1SDM1NC4zNVpNMzU1LjQ3NSAzNy4xMjVWNDEuOTA2MkgzMjUuNzU2VjI4LjA3ODFIMzMxLjgwM1YzNy4xMjVIMzU1LjQ3NVoiIGZpbGw9ImJsYWNrIi8+Cjwvc3ZnPgo=">
+        </div>
+      </div>
+    </div>
+    <div class="snote">미리보기 · 저장 시 고해상도(약 1800px)로 출력됩니다</div>
+  </main>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  let footMode='partner', mode='one';
+
+  const PRESETS={
+    hompan:{label:'홈판 블로그',desc:'그린 · 이서이',t1:'네이버 홈판',t2:'블로그 챌린지 수료증',
+      ten:'Naver Blog Challenge',course:'네이버 홈판 수익화 챌린지',klabel:'닉네임',
+      accent:'#1F7A4D',disc:'#1B2A45',foot:'partner',partner:'이서이',topic:''},
+    nomar:{label:'노마케터스',desc:'그린 · 노마케터스',t1:'노마케터스',t2:'블로그 챌린지 수료증',
+      ten:'Nomarketers Blog Challenge',course:'노마케터스 블로그 챌린지',klabel:'닉네임',
+      accent:'#2D6A4F',disc:'#1B2A45',foot:'partner',partner:'노마케터스',topic:''},
+    chosago:{label:'초사고 글쓰기',desc:'로즈 · 대표서명',t1:'초사고 글쓰기',t2:'30일 챌린지 수료증',
+      ten:'Chosago Writing Challenge',course:'초사고 글쓰기 30일 챌린지',klabel:'성명',
+      accent:'#D24C7C',disc:'#3A1E2A',foot:'ceo',partner:'',topic:''},
+    custom:{label:'직접 입력',desc:'새 강의',t1:'',t2:'챌린지 수료증',
+      ten:'Challenge',course:'',klabel:'닉네임',
+      accent:'#2F6BE0',disc:'#1B2A45',foot:'ceo',partner:'',topic:''}
+  };
+  const pbox=$('presets');
+  Object.keys(PRESETS).forEach(k=>{
+    const p=PRESETS[k],b=document.createElement('button');
+    b.className='pbtn'+(k==='hompan'?' on':'');b.dataset.k=k;
+    b.innerHTML=`<b>${p.label}</b><small>${p.desc}</small>`;
+    b.onclick=()=>{document.querySelectorAll('.pbtn').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');applyPreset(k)};
+    pbox.appendChild(b);
+  });
+  function applyPreset(k){
+    const p=PRESETS[k];
+    $('t1').value=p.t1;$('t2').value=p.t2;$('ten').value=p.ten;$('course').value=p.course;
+    $('klabel').value=p.klabel;$('accent').value=p.accent;$('partner').value=p.partner;$('topic').value=p.topic;
+    $('mdisc').setAttribute('fill',p.disc);
+    setFoot(p.foot);setAccent(p.accent);render();
+  }
+
+  ['#1F7A4D','#2D6A4F','#D24C7C','#2F6BE0','#B8912F','#1C2A3A'].forEach(c=>{
+    const b=document.createElement('button');b.style.background=c;b.title=c;
+    b.onclick=()=>{$('accent').value=c;setAccent(c);};
+    $('sw').appendChild(b);
+  });
+  function setAccent(c){
+    $('cert').style.setProperty('--accent',c);
+    $('rb1').setAttribute('fill',lighten(c,.22));
+    $('rb2').setAttribute('fill',darken(c,.18));
+  }
+  function hex2rgb(h){h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function rgb2hex(a){return '#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+  function lighten(c,t){const a=hex2rgb(c);return rgb2hex(a.map(v=>v+(255-v)*t));}
+  function darken(c,t){const a=hex2rgb(c);return rgb2hex(a.map(v=>v*(1-t)));}
+
+  function setFoot(m){
+    footMode=m;
+    document.querySelectorAll('.seg').forEach(s=>s.classList.toggle('on',s.dataset.foot===m));
+    $('footPartner').style.display=m==='partner'?'flex':'none';
+    $('footCeo').style.display=m==='ceo'?'flex':'none';
+    $('partnerWrap').style.display=m==='partner'?'block':'none';
+  }
+  document.querySelectorAll('.seg').forEach(s=>s.onclick=()=>{setFoot(s.dataset.foot);render();});
+
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');mode=t.dataset.mode;
+    $('oneBox').style.display=mode==='one'?'block':'none';
+    $('bulkBox').style.display=mode==='bulk'?'block':'none';
+    $('warn').style.display='none';
+  });
+
+  const today=new Date(),iso=d=>d.toISOString().slice(0,10);
+  const ago=new Date(today);ago.setDate(ago.getDate()-62);
+  $('d1').value=iso(ago);$('d2').value=iso(today);$('d3').value=iso(today);
+
+  function ymd(v){if(!v)return null;const[y,m,d]=v.split('-').map(Number);return{y,m,d};}
+  function fullK(v){const o=ymd(v);return o?`${o.y}년 ${o.m}월 ${o.d}일`:'';}
+  function period(a,b){
+    const A=ymd(a),B=ymd(b);if(!A||!B)return '';
+    const head=`${A.y}년 ${A.m}월 ${A.d}일`;
+    const tail=(A.y===B.y)?`${B.m}월 ${B.d}일`:`${B.y}년 ${B.m}월 ${B.d}일`;
+    const wk=Math.round((new Date(b)-new Date(a))/(1000*60*60*24)/7);
+    return `${head} ~ ${tail}`+(wk>0?` (${wk}주)`:'');
+  }
+  function ord(n){
+    n=parseInt(n)||1;const s=['th','st','nd','rd'],v=n%100;
+    return n+(s[(v-20)%10]||s[v]||s[0]);
+  }
+
+  function render(nickOverride){
+    const gi=$('gi').value||'1';
+    const course=$('course').value.trim();
+    const nick=(nickOverride!==undefined?nickOverride:$('nick').value.trim());
+    const topic=$('topic').value.trim();
+
+    $('cNum').textContent=gi+'기';
+    $('cK').textContent=$('klabel').value.trim()||'닉네임';
+    $('cNick').textContent=nick;
+    $('cCourse').textContent=(course?course+' ':'')+gi+'기';
+    $('cPeriod').textContent=period($('d1').value,$('d2').value);
+    $('cDate').textContent=fullK($('d3').value);
+    $('cPartner').textContent=$('partner').value.trim();
+
+    const t1=$('t1').value.trim(),t2=$('t2').value.trim();
+    $('cTitle').innerHTML=(t1?t1+'<br>':'')+t2;
+    $('cSub').textContent=`${$('ten').value.trim()} · ${ord(gi)} Cohort`;
+
+    const lead=topic?`위 수료자는 「${topic}」을 주제로 진행된 `:'위 수료자는 프드프에서 진행한 ';
+    $('cBody').innerHTML=`${lead}<b>${course} ${gi}기</b> 과정을 성실히 이수하였기에 이 수료증을 수여합니다.`;
+  }
+  ['t1','t2','ten','course','gi','klabel','topic','d1','d2','d3','partner','nick']
+    .forEach(id=>$(id).addEventListener('input',()=>render()));
+  $('accent').addEventListener('input',e=>setAccent(e.target.value));
+
+  function names(){return $('list').value.split('\n').map(s=>s.trim()).filter(Boolean);}
+  $('list').addEventListener('input',()=>{$('cnt').textContent=names().length+'명';});
+  $('csv').addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      const rows=String(r.result).split(/\r?\n/).map(l=>l.split(',')[0].trim()).filter(Boolean);
+      if(rows.length&&/닉네임|이름|성명|name/i.test(rows[0]))rows.shift();
+      $('list').value=rows.join('\n');$('cnt').textContent=rows.length+'명';
+    };
+    r.readAsText(f,'utf-8');
+  });
+
+  function check(needNames){
+    const miss=[];
+    if(!$('course').value.trim())miss.push('과정명');
+    if(!$('t2').value.trim())miss.push('제목 2행');
+    if(!$('d1').value||!$('d2').value)miss.push('챌린지 기간');
+    if(!$('d3').value)miss.push('수료일');
+    if(footMode==='partner'&&!$('partner').value.trim())miss.push('파트너명');
+    if(needNames){if(!names().length)miss.push('명단');}
+    else if(!$('nick').value.trim())miss.push('닉네임');
+    const w=$('warn');
+    if(miss.length){w.textContent='비어 있는 항목: '+miss.join(', ')+' — 채운 뒤 다시 시도하세요.';w.style.display='block';return false;}
+    w.style.display='none';return true;
+  }
+
+  async function shot(){
+    if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+    return html2canvas($('cert'),{scale:4,backgroundColor:'#FFFFFF',width:452,height:639,
+      windowWidth:452,useCORS:true,logging:false});
+  }
+  function fname(nick){
+    return `프드프_수료증_${(nick||'수료자').replace(/\s+/g,'')}`;
+  }
+  function dl(href,name){const a=document.createElement('a');a.href=href;a.download=name;a.click();}
+  async function busy(btn,fn){
+    const t=btn.textContent;btn.textContent='처리 중…';btn.disabled=true;
+    try{await fn();}catch(e){console.error(e);alert('생성 중 문제가 발생했어요. 다시 시도해 주세요.');}
+    finally{btn.textContent=t;btn.disabled=false;}
+  }
+  function newPdf(){const{jsPDF}=window.jspdf;return new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});}
+  function place(pdf,canvas){
+    const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+    const r=Math.min(pw/452,ph/639),w=452*r,h=639*r;
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',(pw-w)/2,(ph-h)/2,w,h);
+  }
+
+  $('bPng').onclick=e=>{if(!check(false))return;busy(e.target,async()=>{
+    render();const c=await shot();dl(c.toDataURL('image/png'),fname($('nick').value)+'.png');});};
+
+  $('bPdf').onclick=e=>{if(!check(false))return;busy(e.target,async()=>{
+    render();const c=await shot();const p=newPdf();place(p,c);p.save(fname($('nick').value)+'.pdf');});};
+
+  function prog(i,n){
+    const P=$('prog');P.style.display='block';
+    $('progT').textContent=`${i} / ${n}명 생성 중`;
+    $('progB').style.width=(i/n*100)+'%';
+  }
+
+  $('bZip').onclick=e=>{if(!check(true))return;busy(e.target,async()=>{
+    const list=names(),zip=new JSZip();
+    for(let i=0;i<list.length;i++){
+      render(list[i]);await new Promise(r=>setTimeout(r,40));
+      const c=await shot();
+      zip.file(fname(list[i])+'.png',c.toDataURL('image/png').split(',')[1],{base64:true});
+      prog(i+1,list.length);
+    }
+    const blob=await zip.generateAsync({type:'blob'});
+    const url=URL.createObjectURL(blob);
+    dl(url,`프드프_수료증_${$('course').value.trim().replace(/\s+/g,'')}_${$('gi').value}기_${list.length}명.zip`);
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    $('prog').style.display='none';render();
+  });};
+
+  $('bPdfAll').onclick=e=>{if(!check(true))return;busy(e.target,async()=>{
+    const list=names(),pdf=newPdf();
+    for(let i=0;i<list.length;i++){
+      render(list[i]);await new Promise(r=>setTimeout(r,40));
+      const c=await shot();
+      if(i>0)pdf.addPage();
+      place(pdf,c);
+      prog(i+1,list.length);
+    }
+    pdf.save(`프드프_수료증_${$('course').value.trim().replace(/\s+/g,'')}_${$('gi').value}기_${list.length}명.pdf`);
+    $('prog').style.display='none';render();
+  });};
+
+  setAccent('#1F7A4D');setFoot('partner');render();
+})();
+</script>
+</body>
+</html>
